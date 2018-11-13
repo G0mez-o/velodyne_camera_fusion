@@ -4,12 +4,16 @@
   <xacro:property name="camera_height" value="0.1767" />
   <xacro:property name="camera_diameter" value="0.1055" />
   <xacro:property name="camera_mass" value="1.128" />
-  <material name="gray">
-    <color rgba="0.4 0.4 0.4 1"/>
-  </material>
+  <!-- <material name="gray"> -->
+  <!--   <color rgba="0.4 0.4 0.4 1"/> -->
+  <!-- </material> -->
 
-  <material name="dark_gray">
-    <color rgba="0.2 0.2 0.2 1"/>
+  <!-- <material name="dark_gray"> -->
+  <!--   <color rgba="0.2 0.2 0.2 1"/> -->
+  <!-- </material> -->
+
+  <material name="blue">
+    <color rgba="0 0.4 0.8 1" />
   </material>
 
   <!-- Base Footprint -->
@@ -27,7 +31,7 @@
       <geometry>
 	<cylinder length="${camera_height}" radius="${camera_diameter / 2}"/>
       </geometry>
-       <!-- <material name="gray"/> -->
+      <material name="blue"/>
     </visual>
     <!-- <collision> -->
     <!--   <geometry> -->
@@ -41,7 +45,6 @@
     <!--            iyy="3.0" iyz="0.0" -->
     <!--            izz="3.0" /> -->
     <!-- </inertial> -->
-    
     <!-- <visual> -->
     <!--   <geometry> -->
     <!--     <cylinder length="${camera_height}" radius="${camera_radius}" /> -->
@@ -58,6 +61,15 @@
     <!--   <mass value="${camera_mass}"/> -->
     <!-- </inertial> -->
   </link>
+
+  <link name="image0" />
+
+  <joint name="camera_inside_joint" type="fixed">
+    <parent link="camera_foot" />
+    <child link ="image0" />
+    <origin xyz="${camera_diameter / 2} 0 ${(camera_height / 2) + 0.06}" rpy="0 0 0" />
+  </joint>
+
 
 
   <VLP-16 parent="camera_link" name="velodyne">
