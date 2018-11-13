@@ -10,16 +10,16 @@
   </material>
 
   <!-- Base Footprint -->
-  <link name="base_footprint" />
+  <link name="camera_foot" />
 
   <!-- Base Link -->
   <joint name="footprint" type="fixed" >
-    <parent link="base_footprint" />
-    <child link="base_link" />
+    <parent link="camera_foot" />
+    <child link="camera_link" />
     <origin xyz="0 0 0.2" rpy="0 0 0" />
   </joint>
 
-  <link name="base_link" >
+  <link name="camera_link" >
     <visual>
       <geometry>
         <box size="0.15 0.15 0.4" />
@@ -41,25 +41,9 @@
   </link>
 
   <xacro:include filename="$(find sensor_description)/urdf/vlp16.urdf.xacro"/>
-  <VLP-16 parent="base_link" name="velodyne">
+  <VLP-16 parent="camera_link" name="velodyne">
     <origin xyz="0 0 0.2" rpy="0 0 0" />
   </VLP-16>
 
-  <joint name="camera_joint" type="fixed" >
-    <!-- <origin xyz="0.048 0 0.315" rpy="0 0 0" /> -->
-    <!-- <origin xyz="0.048 0 0.315" rpy="-1.57 0 -1.57" /> -->
-    <origin xyz="0.048 0.17 0.315" rpy="-1.57 0 -1.57" />
-    <parent link="base_link" />
-    <child link="camera_link" />
-  </joint>
-
-  <link name="camera_link">
-    <visual>
-      <geometry>
-        <box size="0.09 0.03 0.02" />
-      </geometry>
-       <material name="dark_gray"/>
-    </visual>
-  </link>
 
 </robot>
