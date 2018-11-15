@@ -26,7 +26,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-#include <velodyne_camera_calibration/coloring.h>
+#include <fusion/point_coloring>
 
 template<typename T_p>
 class Projection{
@@ -81,6 +81,7 @@ bool Projection<T_p>::tflistener(std::string target_frame, std::string source_fr
 {
     ros::Time time = ros::Time(0);
     try{
+      //カメラ座標とLiDAR座標が利用できるようになるまで待ち、その後LiDAR座標をカメラ座標へ追従させる変換を行う
         listener.waitForTransform(target_frame, source_frame, time, ros::Duration(4.0));
         listener.lookupTransform(target_frame, source_frame,  time, transform);
         return true;
@@ -99,14 +100,17 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
                                  const sensor_msgs::PointCloud2::ConstPtr pc2)
 {
     typename pcl::PointCloud<T_p>::Ptr cloud(new pcl::PointCloud<T_p>);
+    //LiDARのpclデータをROS用に変換
     pcl::fromROSMsg(*pc2, *cloud);
-            
+
     // transform pointcloud from lidar_frame to camera_frame
     tf::Transform tf;
+    //tfの座標及び回転を準備
     tf.setOrigin(transform.getOrigin());
     tf.setRotation(transform.getRotation());
     typename pcl::PointCloud<T_p>::Ptr trans_cloud(new pcl::PointCloud<T_p>);
-    pcl_ros::transformPointCloud(*cloud, *trans_cloud, tf);
+    //tfの情報を元にLiDARの点群データを変換して出力する
+    pcl_ros::transformPointCloud(tf, *cloud, *trans_cloud);
 
     //cv_bridge
     std::cout<<"cv_bridge"<<std::endl;
@@ -119,7 +123,7 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
     }
     cv::Mat cv_image(cv_img_ptr->image.rows, cv_img_ptr->image.cols, cv_img_ptr->image.type());
     cv_image = cv_bridge::toCvShare(image)->image;
-    
+
     // Realsense Data is saved BGR. change BGR to RGB
     cv::Mat rgb_image;
     cv::cvtColor(cv_image ,rgb_image, CV_BGR2RGB);
@@ -135,12 +139,16 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
 
         cv::Point3d pt_cv((*pt).x, (*pt).y, (*pt).z);
         cv::Point2d uv;
+	//LiDARから得られる点群をピンホールカメラモデルによって2次元に変換し格納する
         uv = cam_model.project3dToPixel(pt_cv);
 
         if(uv.x>0 && uv.x < rgb_image.cols && uv.y > 0 && uv.y < rgb_image.rows)
         {
+	  //LiDARから得られる点の距離を計算する
             double range = sqrt( pow((*pt).x, 2.0) + pow((*pt).y, 2.0) + pow((*pt).z, 2.0));
+	    //点の距離に応じて色付けを変える
             COLOUR c = GetColour(int(range/20*255.0), 0, 255);
+	    //カメラ画像について，点群と画像中で対応する部分に色付き点(円)を表示する
             cv::circle(rgb_image, uv, 1, cv::Scalar(int(255*c.b),int(255*c.g),int(255*c.r)), -1);
             // rgb_image.at<cv::Vec3b>(uv)[0] = 255*c.r;
             // rgb_image.at<cv::Vec3b>(uv)[1] = 255*c.g;
