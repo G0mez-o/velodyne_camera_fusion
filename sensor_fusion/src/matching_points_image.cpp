@@ -1,6 +1,5 @@
 /*
-    Projection PointCloud (Velodyne and Realsense)
-    author : Yudai Sadakuni
+
 */
 
 #include <ros/ros.h>
@@ -147,7 +146,7 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
 	  //LiDARから得られる点の距離を計算する
             double range = sqrt( pow((*pt).x, 2.0) + pow((*pt).y, 2.0) + pow((*pt).z, 2.0));
 	    //点の距離に応じて色付けを変える
-            COLOUR c = GetColour(int(range/20*255.0), 0, 255);
+            COLOUR c = GetColour(int (range/20*255.0), 0, 255);
 	    //カメラ画像について，点群と画像中で対応する部分に色付き点(円)を表示する
             cv::circle(rgb_image, uv, 1, cv::Scalar(int(255*c.b),int(255*c.g),int(255*c.r)), -1);
             // rgb_image.at<cv::Vec3b>(uv)[0] = 255*c.r;
