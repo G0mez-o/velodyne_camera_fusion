@@ -13,16 +13,16 @@
     <!--velodyne-->
     <include file="$(find velodyne_pointcloud)/launch/32e_points.launch" />
 
-    <!--republish-->
+    <!-- republish -->
     <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
-    <!--       args="compressed in:=/camera/color/image_raw raw out:=/camera/color/image_raw" /> -->
+    <!--       args="compressed in:=/occam/image0 raw out:=/occam/image0" /> -->
 
     <!--coloring pointcloud-->
-    <node pkg="velodyne_camera_fusion" type="matching_points_image" name="matching_points_image">
-        <remap from="/image" to="/occam/image0/compressed" />
+    <node pkg="sensor_fusion" type="matching_points_image" name="matching_points_image">
+        <remap from="/image" to="/occam/image0" />
         <remap from="/cinfo" to="/occam/camera_info0" />
         <remap from="/lidar" to="/velodyne_points" />
-        <remap from="/projection" to="/occam/projection" />
+        <remap from="/projection" to="/occam_projection" />
     </node>
 
     <!--rviz-->

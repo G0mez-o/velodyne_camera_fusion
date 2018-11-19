@@ -25,7 +25,7 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 
-#include <fusion/point_coloring>
+#include <point_coloring.h>
 
 template<typename T_p>
 class Projection{
@@ -45,6 +45,7 @@ class Projection{
         bool flag;
 
     public:
+  //コンストラクタ
         Projection();
         void Callback(const sensor_msgs::Image::ConstPtr&, const sensor_msgs::CameraInfo::ConstPtr&, const sensor_msgs::PointCloud2::ConstPtr&);
         void projection(const sensor_msgs::Image::ConstPtr, const sensor_msgs::CameraInfo::ConstPtr, const sensor_msgs::PointCloud2::ConstPtr);
@@ -57,6 +58,7 @@ Projection<T_p>::Projection()
       image_sub(nh, "/image", 10), cinfo_sub(nh, "/cinfo", 10), lidar_sub(nh, "/lidar", 10),
       sensor_fusion_sync(sensor_fusion_sync_subs(10), image_sub, cinfo_sub, lidar_sub)
 {
+
     sensor_fusion_sync.registerCallback(boost::bind(&Projection::Callback, this, _1, _2, _3));
     pub = nh.advertise<sensor_msgs::Image>("/projection", 10);
     flag = false;
@@ -69,7 +71,6 @@ void Projection<T_p>::Callback(const sensor_msgs::Image::ConstPtr& image,
                              const sensor_msgs::CameraInfo::ConstPtr& cinfo,
                              const sensor_msgs::PointCloud2::ConstPtr& pc2)
 {
-
     if(!flag) tflistener(image->header.frame_id, pc2->header.frame_id);
     projection(image, cinfo, pc2);
 }
@@ -109,7 +110,7 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
     tf.setRotation(transform.getRotation());
     typename pcl::PointCloud<T_p>::Ptr trans_cloud(new pcl::PointCloud<T_p>);
     //tfの情報を元にLiDARの点群データを変換して出力する
-    pcl_ros::transformPointCloud(tf, *cloud, *trans_cloud);
+    pcl_ros::transformPointCloud(*cloud, *trans_cloud, tf);
 
     //cv_bridge
     std::cout<<"cv_bridge"<<std::endl;
@@ -165,7 +166,11 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
 
 int main(int argc, char** argv)
 {
-    ros::init(argc, argv, "projection_pointcloud");
+  ROS_INFO("Hello world!!");
+
+    ros::init(argc, argv, "matching_points_image");
+
+    ROS_INFO("HELLO WORLD!!");
 
     Projection<pcl::PointXYZI> cr;
 
