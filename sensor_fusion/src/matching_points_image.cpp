@@ -55,12 +55,14 @@ class Projection{
 template<typename T_p>
 Projection<T_p>::Projection()
     : nh("~"),
-      image_sub(nh, "/image", 10), cinfo_sub(nh, "/cinfo", 10), lidar_sub(nh, "/lidar", 10),
+      image_sub(nh, "/image", 10), cinfo_sub(nh, "/camera_info", 10), lidar_sub(nh, "/lidar", 10),
       sensor_fusion_sync(sensor_fusion_sync_subs(10), image_sub, cinfo_sub, lidar_sub)
 {
+    ROS_INFO("now constract function starting");
 
     sensor_fusion_sync.registerCallback(boost::bind(&Projection::Callback, this, _1, _2, _3));
     pub = nh.advertise<sensor_msgs::Image>("/projection", 10);
+    ROS_INFO("advertised /projection");
     flag = false;
 }
 
@@ -71,6 +73,7 @@ void Projection<T_p>::Callback(const sensor_msgs::Image::ConstPtr& image,
                              const sensor_msgs::CameraInfo::ConstPtr& cinfo,
                              const sensor_msgs::PointCloud2::ConstPtr& pc2)
 {
+    ROS_INFO("Call back start");
     if(!flag) tflistener(image->header.frame_id, pc2->header.frame_id);
     projection(image, cinfo, pc2);
 }
@@ -84,6 +87,7 @@ bool Projection<T_p>::tflistener(std::string target_frame, std::string source_fr
       //カメラ座標とLiDAR座標が利用できるようになるまで待ち、その後LiDAR座標をカメラ座標へ追従させる変換を行う
         listener.waitForTransform(target_frame, source_frame, time, ros::Duration(4.0));
         listener.lookupTransform(target_frame, source_frame,  time, transform);
+	ROS_INFO("Transform OK");
         return true;
     }
     catch (tf::TransformException ex){
@@ -154,8 +158,13 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
             // rgb_image.at<cv::Vec3b>(uv)[1] = 255*c.g;
             // rgb_image.at<cv::Vec3b>(uv)[2] = 255*c.b;
         }
+	else
+	  {
+	    ROS_INFO("out of screen!!!");
+	  }
     }
 
+    ROS_INFO("Pointcloud processing complete");
     sensor_msgs::ImagePtr projection_image;
     projection_image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", rgb_image).toImageMsg();
     projection_image->header.frame_id = image->header.frame_id;
@@ -166,11 +175,11 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
 
 int main(int argc, char** argv)
 {
-  ROS_INFO("Hello world!!");
+    ROS_INFO("Hello world!!");
 
     ros::init(argc, argv, "matching_points_image");
 
-    ROS_INFO("HELLO WORLD!!");
+    ROS_INFO("declare class 'Projection'");
 
     Projection<pcl::PointXYZI> cr;
 

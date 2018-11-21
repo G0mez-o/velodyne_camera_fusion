@@ -11,14 +11,14 @@
     <!--       args="0.000 0.000 0.000 -1.571 0.000 -1.571 camera_color_frame camera_color_optical_frame 100"/> -->
 
     <!--velodyne-->
-    <!-- <include file="$(find velodyne_pointcloud)/launch/VLP16_points.launch" /> -->
+
 
     <!-- republish -->
     <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
     <!--       args="compressed in:=/occam/image0 raw out:=/occam/image0" /> -->
 
     <!--coloring pointcloud-->
-    <node pkg="sensor_fusion" type="matching_points_image" name="matching_points_image" output="screen">
+    <node pkg="sensor_fusion" type="points_matching_image" name="points_matching_image" output="screen">
         <remap from="/image" to="/occam/image0" />
         <remap from="/cinfo" to="/occam/camera_info0" />
         <remap from="/lidar" to="/velodyne_points" />

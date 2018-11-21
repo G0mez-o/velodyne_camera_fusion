@@ -56,4 +56,17 @@ target_link_libraries(matching_points_image
     ${OpenCV_+IBRARIES}
 )
 
+add_executable(points_matching_image src/points_matching_image.cpp)
+target_link_libraries(points_matching_image
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${OpenCV_+IBRARIES}
+)
 
+add_executable(camera_info_publisher src/camera_info_publisher.cpp)
+target_link_libraries(camera_info_publisher
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${OpenCV_+IBRARIES}
+
+)
