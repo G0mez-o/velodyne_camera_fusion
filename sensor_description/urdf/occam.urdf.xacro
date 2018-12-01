@@ -36,12 +36,12 @@
     <!-- </inertial> -->
   </link>
 
-  <link name="image0" />
+  <link name="/occam/image0" />
 
   <joint name="camera_inside_joint" type="fixed">
     <parent link="camera_foot" />
-    <child link ="image0" />
-    <origin xyz="${camera_diameter / 2} 0 ${(camera_height / 2) + 0.06}" rpy="0 0 0" />
+    <child link ="/occam/image0" />
+    <origin xyz="${camera_diameter / 2} 0 ${(camera_height / 2) + 0.06}" rpy="-1.57 0 -1.57" />
   </joint>
 
 </robot>

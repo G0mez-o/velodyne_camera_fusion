@@ -74,7 +74,7 @@ void Projection<T_p>::Callback(const sensor_msgs::Image::ConstPtr& image,
                              const sensor_msgs::PointCloud2::ConstPtr& pc2)
 {
     ROS_INFO("Call back start");
-    if(!flag) tflistener(image->header.frame_id, pc2->header.frame_id);
+    if(!flag) tflistener("occam/image0", "/velodyne");
     projection(image, cinfo, pc2);
 }
 
@@ -97,6 +97,22 @@ bool Projection<T_p>::tflistener(std::string target_frame, std::string source_fr
     }
 }
 
+// template<typename T_p>
+// bool Projection<T_p>::tflisteners(std::string target_frame, std::string source_frame)
+// {
+//   ros::Time time = ros::Time(0);
+//   try{
+//     listener.waitForTransform(target_frame, source_frame, time, ros::Duration(4.0));
+//     listener.lookupTransform(target_frame, source_frame, time, transform);
+//     ROS_INFO("Transform OK");
+//     return true;
+//   }
+//   catch (tf::TransformException ex){
+//     ROS_ERROR("%s", ex.what());
+//     ros::Duration(4.0).sleep();
+//     return false;
+//   }
+// }
 // main function
 template<typename T_p>
 void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
@@ -135,35 +151,85 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
     // set PinholeCameraModel
     image_geometry::PinholeCameraModel cam_model;
     cam_model.fromCameraInfo(cinfo);
+    int i = 0;
+
+    // for(typename pcl::PointCloud<T_p>::iterator pt=trans_cloud->points.begin(); pt<trans_cloud->points.end(); pt++)
+    // {
+    //   if((*pt).z<0) continue;
+
+    //     cv::Point3d pt_cv((*pt).x, (*pt).y, (*pt).z);
+    //     cv::Point2d uv;
+    // 	//LiDARから得られる点群をピンホールカメラモデルによって2次元に変換し格納する
+    //     uv = cam_model.project3dToPixel(pt_cv);
+
+    //     if(uv.x>0 && uv.x < rgb_image.cols && uv.y > 0 && uv.y < rgb_image.rows)
+    //     {
+    // 	  //LiDARから得られる点の距離を計算する
+    //         double range = sqrt( pow((*pt).x, 2.0) + pow((*pt).y, 2.0) + pow((*pt).z, 2.0));
+    // 	    //点の距離に応じて色付けを変える
+    //         COLOUR c = GetColour(int (range/20*255.0), 0, 255);
+    // 	    //カメラ画像について，点群と画像中で対応する部分に色付き点(円)を表示する
+    //         cv::circle(rgb_image, uv, 10, cv::Scalar(int(255*c.b),int(255*c.g),int(255*c.r)), -1);
+    //         // rgb_image.at<cv::Vec3b>(uv)[0] = 255*c.r;
+    //         // rgb_image.at<cv::Vec3b>(uv)[1] = 255*c.g;
+    //         // rgb_image.at<cv::Vec3b>(uv)[2] = 255*c.b;
+
+    //     }
+    // 	else
+    //     {
+    // 	  i++;
+    // 	  if (i < 50)
+    // 	  {
+    // 	    ROS_INFO("x: %f", (*pt).x);
+    // 	    ROS_INFO("y: %f", (*pt).y);
+    // 	    ROS_INFO("z: %f", (*pt).z);
+    // 	    ROS_INFO("camera_x: %f", uv.x);
+    // 	    ROS_INFO("camera_y: %f", uv.y);
+    // 	  }
+    // 	}
+    // }
+    // ROS_INFO("Pointcloud processing complete");
+    // sensor_msgs::ImagePtr projection_image;
+    // projection_image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", rgb_image).toImageMsg();
+    // projection_image->header.frame_id = image->header.frame_id;
+    // projection_image->header.stamp = ros::Time::now();
+    // pub.publish(projection_image);
 
     // Projection Step
     for(typename pcl::PointCloud<T_p>::iterator pt=trans_cloud->points.begin(); pt<trans_cloud->points.end(); pt++)
     {
-        if((*pt).z<0) continue;
+      if((*pt).z<0) continue;
 
         cv::Point3d pt_cv((*pt).x, (*pt).y, (*pt).z);
         cv::Point2d uv;
 	//LiDARから得られる点群をピンホールカメラモデルによって2次元に変換し格納する
         uv = cam_model.project3dToPixel(pt_cv);
 
-        if(uv.x>0 && uv.x < rgb_image.cols && uv.y > 0 && uv.y < rgb_image.rows)
+        if (uv.x>(-rgb_image.cols/2) && uv.x < (rgb_image.cols/2) && uv.y > (-rgb_image.rows/2) && uv.y < (rgb_image.rows/2))
         {
 	  //LiDARから得られる点の距離を計算する
             double range = sqrt( pow((*pt).x, 2.0) + pow((*pt).y, 2.0) + pow((*pt).z, 2.0));
 	    //点の距離に応じて色付けを変える
             COLOUR c = GetColour(int (range/20*255.0), 0, 255);
+	    cv::Point2d uv_(uv.x + rgb_image.cols / 2, uv.y + rgb_image.rows / 2);
 	    //カメラ画像について，点群と画像中で対応する部分に色付き点(円)を表示する
-            cv::circle(rgb_image, uv, 1, cv::Scalar(int(255*c.b),int(255*c.g),int(255*c.r)), -1);
+            cv::circle(rgb_image, uv_, 1, cv::Scalar(int(255*c.b),int(255*c.g),int(255*c.r)), -1);
+	    i++;
+	    if (i < 20)
+	      {
+		ROS_INFO("x: %f", (*pt).x);
+		ROS_INFO("y: %f", (*pt).y);
+		ROS_INFO("z: %f", (*pt).z);
+		ROS_INFO("image_x: %f", uv_.x);
+		ROS_INFO("image_y: %f", uv_.y);
+	      }
             // rgb_image.at<cv::Vec3b>(uv)[0] = 255*c.r;
             // rgb_image.at<cv::Vec3b>(uv)[1] = 255*c.g;
             // rgb_image.at<cv::Vec3b>(uv)[2] = 255*c.b;
-        }
-	else
-	  {
-	    ROS_INFO("out of screen!!!");
-	  }
-    }
 
+        }
+
+    }
     ROS_INFO("Pointcloud processing complete");
     sensor_msgs::ImagePtr projection_image;
     projection_image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", rgb_image).toImageMsg();

@@ -12,10 +12,7 @@
 
     <!--velodyne-->
 
-
-    <!-- republish -->
-    <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" -->
-    <!--       args="compressed in:=/occam/image0 raw out:=/occam/image0" /> -->
+ 
 
     <!--coloring pointcloud-->
     <node pkg="sensor_fusion" type="camera_info_publisher" name="camera_info_publisher" output="screen">
