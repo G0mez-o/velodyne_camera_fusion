@@ -230,7 +230,7 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
         }
 
     }
-    ROS_INFO("Pointcloud processing complete");
+    ROS_INFO("%d Pointcloud processing complete", i);
     sensor_msgs::ImagePtr projection_image;
     projection_image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", rgb_image).toImageMsg();
     projection_image->header.frame_id = image->header.frame_id;
