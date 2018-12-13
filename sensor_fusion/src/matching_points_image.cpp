@@ -39,6 +39,7 @@ class Projection{
         message_filters::Synchronizer<sensor_fusion_sync_subs> sensor_fusion_sync;
 
         ros::Publisher pub;
+        ros::Publisher pub_;
 
         tf::TransformListener listener;
         tf::StampedTransform  transform;
@@ -62,6 +63,7 @@ Projection<T_p>::Projection()
 
     sensor_fusion_sync.registerCallback(boost::bind(&Projection::Callback, this, _1, _2, _3));
     pub = nh.advertise<sensor_msgs::Image>("/projection", 10);
+    pub_ = nh.advertise<sensor_msgs::PointCloud2>("/fusion_points", 10);
     ROS_INFO("advertised /projection");
     flag = false;
 }
@@ -152,6 +154,10 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
     image_geometry::PinholeCameraModel cam_model;
     cam_model.fromCameraInfo(cinfo);
     int i = 0;
+    int j = 0;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr msg (new pcl::PointCloud<pcl::PointXYZRGB>);
+    msg->header.frame_id = "occam/image0";
+    msg->points.resize(20000);
 
     // for(typename pcl::PointCloud<T_p>::iterator pt=trans_cloud->points.begin(); pt<trans_cloud->points.end(); pt++)
     // {
@@ -226,7 +232,14 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
             // rgb_image.at<cv::Vec3b>(uv)[0] = 255*c.r;
             // rgb_image.at<cv::Vec3b>(uv)[1] = 255*c.g;
             // rgb_image.at<cv::Vec3b>(uv)[2] = 255*c.b;
-
+	    msg->points[j].x = (*pt).x;
+	    msg->points[j].y = (*pt).y;
+	    msg->points[j].z = (*pt).z;
+	    msg->points[j].r = int(255*c.r);
+	    msg->points[j].g = int(255*c.g);
+	    msg->points[j].b = int(255*c.b);
+	    msg->points.push_back(msg->points[j]);
+	    j++;
         }
 
     }
@@ -236,6 +249,8 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
     projection_image->header.frame_id = image->header.frame_id;
     projection_image->header.stamp = ros::Time::now();
     pub.publish(projection_image);
+    pcl_conversions::toPCL(ros::Time::now(), msg->header.stamp);
+    pub_.publish(msg);
 }
 
 
