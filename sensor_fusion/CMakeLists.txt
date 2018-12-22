@@ -17,6 +17,7 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   pcl_ros
+  jsk_recognition_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -70,3 +71,11 @@ target_link_libraries(camera_info_publisher
   ${OpenCV_+IBRARIES}
 
 )
+
+# add_executable(measure_range src/measure_range.cpp)
+# target_link_libraries(camera_info_publisher
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+#   ${OpenCV_+IBRARIES}
+
+# )
