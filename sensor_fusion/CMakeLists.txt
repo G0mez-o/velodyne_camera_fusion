@@ -18,6 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   sensor_msgs
   pcl_ros
   jsk_recognition_msgs
+  message_generation
 )
 
 ## System dependencies are found with CMake's conventions
@@ -34,6 +35,15 @@ if (OPENMP_FOUND)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
+add_message_files(
+  FILES
+  object_datas.msg;
+  object_data.msg;
+  )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+)
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES velodyne_camera_calibration
@@ -72,10 +82,10 @@ target_link_libraries(camera_info_publisher
 
 )
 
-# add_executable(measure_range src/measure_range.cpp)
-# target_link_libraries(camera_info_publisher
-#   ${catkin_LIBRARIES}
-#   ${PCL_LIBRARIES}
-#   ${OpenCV_+IBRARIES}
+add_executable(measure_range src/measure_range.cpp)
+target_link_libraries(camera_info_publisher
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${OpenCV_+IBRARIES}
 
-# )
+)
