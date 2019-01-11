@@ -33,16 +33,14 @@ ros::NodeHandle nh;
 
 ros::Publisher pub, pub_, pub__;
 
-void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const sensor_fusion::object_num::ConstPtr& n)
+void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const sensor_fusion::object_num::ConstPtr& num)
 {
 
-  int8_t num = n->num;
-  int j;
+  int8_t obj_num = num->num;
+  int j = 0;
 
   pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 10);
-
   pub_ = nh.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_boxes", 10);
-
   pub__ = nh.advertise<sensor_fusion::object_datas>("/object_range", 10);
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
@@ -56,9 +54,9 @@ void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::Came
   pcl::PointCloud<pcl::PointXYZ>::Ptr msg (new pcl::PointCloud<pcl::PointXYZ>);
   msg->header.frame_id = "occam/image0";
   msg->points.resize(20000);
-  double param[num][5] = {0};
-  std::string objname[num];
-  for (int i = 0; i < num; i++)
+  double param[obj_num][5] = {0};
+  std::string objname[obj_num];
+  for (int i = 0; i < obj_num; i++)
     {
       objname[i] = boxes->bounding_boxes[i].Class;
     }
@@ -68,7 +66,7 @@ void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::Came
       cv::Point2d pv;
       pv = cam_model.project3dToPixel(p_cv);
       cv::Point2d pv_(pv.x + 240, pv.y + 360);
-      for (int i = 0; i < num; i++)
+      for (int i = 0; i < obj_num; i++)
 	{
 	  if (pv_.x > boxes->bounding_boxes[i].xmin && pv_.x < boxes->bounding_boxes[i].xmax && pv_.y > boxes->bounding_boxes[i].ymin && pv_.y < boxes->bounding_boxes[i].ymax)
 	    {
@@ -85,7 +83,7 @@ void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::Came
 	    }
 	}
     }
-  for (int i = 0; i < num; i++)
+  for (int i = 0; i < obj_num; i++)
     {
       param[i][0] /= param[i][4];
       param[i][1] /= param[i][4];
