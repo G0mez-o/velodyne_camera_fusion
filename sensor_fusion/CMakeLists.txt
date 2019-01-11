@@ -39,6 +39,7 @@ add_message_files(
   FILES
   object_datas.msg;
   object_data.msg;
+  object_num.msg;
   )
 generate_messages(
   DEPENDENCIES
@@ -82,10 +83,26 @@ target_link_libraries(camera_info_publisher
 
 )
 
-add_executable(measure_range src/measure_range.cpp)
-target_link_libraries(camera_info_publisher
+add_executable(measuring_range src/measuring_range.cpp)
+target_link_libraries(measuring_range
+  ${catkin_LIBRARIES}
+  ${PCL_LIBRARIES}
+  ${OpenCV_+IBRARIES}
+
+  )
+
+add_executable(num_sub src/num_sub.cpp)
+target_link_libraries(num_sub
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
   ${OpenCV_+IBRARIES}
 
 )
+
+# add_executable(measure_range src/measure_range.cpp)
+# target_link_libraries(measure_range
+#   ${catkin_LIBRARIES}
+#   ${PCL_LIBRARIES}
+#   ${OpenCV_+IBRARIES}
+
+# )

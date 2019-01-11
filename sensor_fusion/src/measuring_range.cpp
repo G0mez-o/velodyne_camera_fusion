@@ -28,15 +28,15 @@
 #include <sensor_fusion/object_datas.h>
 #include <sensor_fusion/object_data.h>
 #include <std_msgs/Int8.h>
-
+#include <sensor_fusion/object_num.h>
 ros::NodeHandle nh;
 
 ros::Publisher pub, pub_, pub__;
 
-void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const std_msgs::Int8::ConstPtr& n)
+void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const sensor_fusion::object_num::ConstPtr& n)
 {
 
-  int8_t num = n.data;
+  int8_t num = n->num;
   int j;
 
   pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 10);
@@ -60,7 +60,7 @@ void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::Came
   std::string objname[num];
   for (int i = 0; i < num; i++)
     {
-      objname[i] = boxes.bounding_boxes[i].Class;
+      objname[i] = boxes->bounding_boxes[i].Class;
     }
   for (pcl::PointCloud<pcl::PointXYZRGB>::iterator pt=cloud->points.begin(); pt<cloud->points.end(); pt++)
     {
@@ -70,7 +70,7 @@ void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::Came
       cv::Point2d pv_(pv.x + 240, pv.y + 360);
       for (int i = 0; i < num; i++)
 	{
-	  if (pv_.x > boxes.bounding_boxes[i].xmin && pv_.x < boxes.bounding_boxes[i].xmax && pv_.y > boxes.bounding_boxes[i].ymin && pv_.y < boxes.bounding_boxes[i].ymax)
+	  if (pv_.x > boxes->bounding_boxes[i].xmin && pv_.x < boxes->bounding_boxes[i].xmax && pv_.y > boxes->bounding_boxes[i].ymin && pv_.y < boxes->bounding_boxes[i].ymax)
 	    {
 	      param[i][0] += (*pt).x;
 	      param[i][1] += (*pt).y;
@@ -122,17 +122,10 @@ void proc_func(void)
   message_filters::Subscriber<sensor_msgs::PointCloud2> proj_point_sub(nh, "/fusion_points", 10);
   message_filters::Subscriber<sensor_msgs::CameraInfo> cam_info_sub(nh, "/camera_info", 10);
   message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> bounding_sub(nh, "/darknet_ros/bounding_boxes", 10);
-  message_filters::Subscriber<std_msgs::Int8> boxnum_sub(nh, "/darknet_ros/found_object", 10);
+  message_filters::Subscriber<sensor_fusion::object_num> obj_num_sub(nh, "/obje_num", 10);
 
-
-  // cam_info_sub(nh, "/camera_info", 10);
-  // proj_point_sub(nh, "/fusion_points", 10);
-  // bounding_sub(nh, "/darknet_ros/bounding_boxes", 10);
-  // image_sub(nh, "/occam/image0", 10);
-  // boxnum_sub(nh, "/darknet_ros/found_object", 10);
-
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::PointCloud2, darknet_ros_msgs::BoundingBoxes, std_msgs::Int8> fusion_bounding_subs;
-  message_filters::Synchronizer<fusion_bounding_subs> fusion_bounding_sync(fusion_bounding_subs(10), image_sub, cam_info_sub, proj_point_sub, bounding_sub, boxnum_sub);
+  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::PointCloud2, darknet_ros_msgs::BoundingBoxes, sensor_fusion::object_num> fusion_bounding_subs;
+  message_filters::Synchronizer<fusion_bounding_subs> fusion_bounding_sync(fusion_bounding_subs(10), image_sub, cam_info_sub, proj_point_sub, bounding_sub, obj_num_sub);
   fusion_bounding_sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5));
 }
 
