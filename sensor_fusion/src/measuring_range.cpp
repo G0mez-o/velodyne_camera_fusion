@@ -21,14 +21,18 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
+
 #include <jsk_recognition_msgs/BoundingBoxArray.h>
+
 #include <point_coloring.h>
+
 #include <darknet_ros_msgs/BoundingBoxes.h>
 #include <darknet_ros_msgs/BoundingBox.h>
+
 #include <sensor_fusion/object_datas.h>
 #include <sensor_fusion/object_data.h>
-#include <std_msgs/Int8.h>
 #include <sensor_fusion/object_num.h>
+
 ros::NodeHandle nh;
 
 ros::Publisher pub, pub_, pub__;
