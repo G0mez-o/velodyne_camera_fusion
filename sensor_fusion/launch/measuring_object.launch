@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<!--Projection PointCloud-->
+
+<launch>
+
+    <node pkg="sensor_fusion" type="num_sub" name="num_sub">
+    </node>
+
+    <node pkg="sensor_fusion" type="measuring_range" name="measuring_range" output="screen">
+    </node>
+
+</launch>

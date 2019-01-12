@@ -33,19 +33,43 @@
 #include <sensor_fusion/object_data.h>
 #include <sensor_fusion/object_num.h>
 
-ros::NodeHandle nh;
+class bounding_pub{
+    private:
+        ros::NodeHandle nh;
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::PointCloud2, darknet_ros_msgs::BoundingBoxes, sensor_fusion::object_num> fusion_bounding_subs;
+        message_filters::Subscriber<sensor_msgs::Image> image_sub;
+        message_filters::Subscriber<sensor_msgs::PointCloud2> proj_point_sub;
+        message_filters::Subscriber<sensor_msgs::CameraInfo> cam_info_sub;
+        message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> bounding_sub;
+        message_filters::Subscriber<sensor_fusion::object_num> obj_num_sub;
+        message_filters::Synchronizer<fusion_bounding_subs> fusion_bounding_sync;
+        ros::Publisher pub;
+        ros::Publisher pub_;
+        ros::Publisher pub__;
 
-ros::Publisher pub, pub_, pub__;
+    public:
+  //コンストラクタ
+        bounding_pub();
+        void Callback(const sensor_msgs::Image::ConstPtr&, const sensor_msgs::CameraInfo::ConstPtr&, const sensor_msgs::PointCloud2::ConstPtr&, const darknet_ros_msgs::BoundingBoxes::ConstPtr&, const sensor_fusion::object_num::ConstPtr&);
+};
 
-void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const sensor_fusion::object_num::ConstPtr& num)
+bounding_pub::bounding_pub()
+    : nh("~"),
+      image_sub(nh, "/occam/image0", 10), proj_point_sub(nh, "/fusion_points", 10), cam_info_sub(nh, "/camera_info", 10), bounding_sub(nh, "/darknet_ros/bounding_boxes", 10), obj_num_sub(nh, "/obje_num", 10),
+      fusion_bounding_sync(fusion_bounding_subs(10), image_sub, cam_info_sub, proj_point_sub, bounding_sub, obj_num_sub)
+
 {
+    pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 10);
+    pub_ = nh.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_boxes", 10);
+    pub__ = nh.advertise<sensor_fusion::object_datas>("/object_range", 10);
+    fusion_bounding_sync.registerCallback(boost::bind(&bounding_pub::Callback, this, _1, _2, _3, _4, _5));
+}
 
+void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const sensor_fusion::object_num::ConstPtr& num)
+{
   int8_t obj_num = num->num;
   int j = 0;
 
-  pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 10);
-  pub_ = nh.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_boxes", 10);
-  pub__ = nh.advertise<sensor_fusion::object_datas>("/object_range", 10);
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   jsk_recognition_msgs::BoundingBoxArray bboxes;
@@ -118,32 +142,14 @@ void callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::Came
   pub__.publish(datas);
 }
 
-void proc_func(void)
-{
-  message_filters::Subscriber<sensor_msgs::Image> image_sub(nh, "/occam/image0", 10);
-  message_filters::Subscriber<sensor_msgs::PointCloud2> proj_point_sub(nh, "/fusion_points", 10);
-  message_filters::Subscriber<sensor_msgs::CameraInfo> cam_info_sub(nh, "/camera_info", 10);
-  message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> bounding_sub(nh, "/darknet_ros/bounding_boxes", 10);
-  message_filters::Subscriber<sensor_fusion::object_num> obj_num_sub(nh, "/obje_num", 10);
-
-  typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::PointCloud2, darknet_ros_msgs::BoundingBoxes, sensor_fusion::object_num> fusion_bounding_subs;
-  message_filters::Synchronizer<fusion_bounding_subs> fusion_bounding_sync(fusion_bounding_subs(10), image_sub, cam_info_sub, proj_point_sub, bounding_sub, obj_num_sub);
-  fusion_bounding_sync.registerCallback(boost::bind(&callback, _1, _2, _3, _4, _5));
-}
-
 int main(int argc, char** argv)
 {
-    ROS_INFO("Hello world!!");
 
-    ros::init(argc, argv, "measure_range");
-    ros::Rate rate(10);
+    ros::init(argc, argv, "matching_points_image");
 
-    while(ros::ok())
-      {
-	proc_func();
-	ros::spinOnce();
-	rate.sleep();
-      }
+    bounding_pub pu;
+
+    ros::spin();
 
     return 0;
 }

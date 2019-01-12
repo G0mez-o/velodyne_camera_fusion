@@ -30,15 +30,34 @@
 #include <sensor_fusion/object_num.h>
 #include <std_msgs/Int8.h>
 
-ros::Publisher num_pub;
+class num_pub{
+    private:
+        ros::NodeHandle nh;
+        message_filters::Subscriber<std_msgs::Int8> obj_num_sub;
 
-void pub_callback(std_msgs::Int8 msg)
+    public:
+  //コンストラクタ
+        num_pub();
+        void Callback(const sensor_msgs::Image::ConstPtr&, const sensor_msgs::CameraInfo::ConstPtr&, const sensor_msgs::PointCloud2::ConstPtr&);
+        void pub_callback(const std_msgs::Int8::ConstPtr&);
+};
+
+num_pub::num_pub()
+    : nh("~"),
+      obj_num_sub(nh, "/darknet_ros/found_object", 1)
 {
+    obj_num_sub(num_pub::pub_callback);
+}
 
+void num_pub::pub_callback(std_msgs::Int8::ConstPtr& msg)
+{
+  ros::Publisher nu_pub;
+  ros::NodeHandle nhh("~~");
+  nu_pub = nhh.advertise<sensor_fusion::object_num>("/obje_num", 10);
   sensor_fusion::object_num num;
   num.header.stamp = ros::Time::now();
-  num.num = msg.data;
-  num_pub.publish(num);
+  num.num = msg->data;
+  nu_pub.publish(num);
   // image_geometry::PinholeCameraModel cam_model;
   // cam_model.fromCameraInfo(camera);
   // cv::Point3d pt_cv(0.15, 0.15, 0.45);
@@ -49,14 +68,9 @@ void pub_callback(std_msgs::Int8 msg)
 
 int main(int argc, char** argv)
 {
-
   ros::init(argc, argv, "object_number_pub");
 
-  ros::NodeHandle nh;
-
-  num_pub = nh.advertise<sensor_fusion::object_num>("/obje_num", 10);
-
-  ros::Subscriber obj_num_sub = nh.subscribe("/darknet_ros/found_object", 1, pub_callback);
+  num_pub pu;
 
   ros::spin();
 }
