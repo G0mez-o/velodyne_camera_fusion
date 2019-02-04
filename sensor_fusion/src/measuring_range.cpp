@@ -101,7 +101,7 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
 	      param[i][0] += (*pt).x;
 	      param[i][1] += (*pt).y;
 	      param[i][2] += (*pt).z;
-	      param[i][3] += sqrt( pow((*pt).x, 2.0) + pow((*pt).y, 2.0) + pow((*pt).z, 2.0));
+	      param[i][3] += sqrt( pow((*pt).x, 2.0) + pow((*pt).z, 2.0));
 	      param[i][4]++;
 	      msg->points[j].x = (*pt).x;
 	      msg->points[j].y = (*pt).y;

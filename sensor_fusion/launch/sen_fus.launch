@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--Projection PointCloud-->
+
+<launch>
+
+    <node pkg="sensor_fusion" type="camera_info_publisher" name="camera_info_publisher" output="screen">
+        <remap from="/image" to="/occam/image0" />
+        <remap from="/cinfo" to="/occam/camera_info0" />
+        <remap from="/lidar" to="/velodyne_points" />
+        <remap from="/projection" to="/occam_projection" />
+    </node>
+
+    <node pkg="sensor_fusion" type="matching_points_image" name="matching_points_image" output="screen">
+        <remap from="/image" to="/occam/image0" />
+        <remap from="/cinfo" to="/occam/camera_info0" />
+        <remap from="/lidar" to="/velodyne_points" />
+        <remap from="/projection" to="/occam_projection" />
+    </node>
+</launch>
