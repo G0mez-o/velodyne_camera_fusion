@@ -30,14 +30,21 @@
 #include <sensor_fusion/object_num.h>
 #include <std_msgs/Int8.h>
 
+#include <darknet_ros_msgs/BoundingBoxes.h>
+
 ros::Publisher num_pub;
 
-void pub_callback(std_msgs::Int8 msg)
+//void pub_callback(std_msgs::Int8 msg)
+void pub_callback(darknet_ros_msgs::BoundingBoxes msg)
 {
 
+  //  sensor_fusion::object_num num;
+  //  num.header.stamp = ros::Time::now();
+  //  num.num = msg.data;
+  //  num_pub.publish(num);
   sensor_fusion::object_num num;
-  num.header.stamp = ros::Time::now();
-  num.num = msg.data;
+  num.header.stamp = msg.header.stamp;
+  num.num = msg.bounding_boxes.size();
   num_pub.publish(num);
   // image_geometry::PinholeCameraModel cam_model;
   // cam_model.fromCameraInfo(camera);
@@ -56,7 +63,8 @@ int main(int argc, char** argv)
 
   num_pub = nh.advertise<sensor_fusion::object_num>("/obje_num", 10);
 
-  ros::Subscriber obj_num_sub = nh.subscribe("/darknet_ros/found_object", 1, pub_callback);
+  //  ros::Subscriber obj_num_sub = nh.subscribe("/darknet_ros/found_object", 1, pub_callback);
+  ros::Subscriber obj_num_sub = nh.subscribe("/darknet_ros/bounding_boxes", 1, pub_callback);
 
   ros::spin();
 }

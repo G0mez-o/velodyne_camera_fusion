@@ -19,6 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   jsk_recognition_msgs
   message_generation
+  darknet_ros_msgs
 )
 
 ## System dependencies are found with CMake's conventions

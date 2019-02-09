@@ -27,10 +27,10 @@
 ros::Publisher pub;
 
 
-void callback(const sensor_msgs::Image image)
+void publish_camerainfo(void)
 {
   sensor_msgs::CameraInfo cinfo;
-  cinfo.header.stamp = image.header.stamp;
+  cinfo.header.stamp = ros::Time::now();
   cinfo.header.frame_id = "occam";
   cinfo.height = 480;
   cinfo.width = 752;
@@ -60,7 +60,14 @@ int main(int argc, char** argv)
 
   ROS_INFO("declare node name!!");
 
-  ros::Subscriber obj_num_sub = nh.subscribe("/occam/image0", 1, callback);
-  ros::spin();
+  ros::Rate rate(20);
+  while(ros::ok())
+    {
+      publish_camerainfo();
+      ros::spinOnce();
+      rate.sleep();
+    }
+
+  return 0;
 
 }

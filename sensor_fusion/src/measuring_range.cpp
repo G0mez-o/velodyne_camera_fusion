@@ -55,14 +55,16 @@ class bounding_pub{
 
 bounding_pub::bounding_pub()
     : nh("~"),
-      image_sub(nh, "/occam/image0", 10), proj_point_sub(nh, "/fusion_points", 10), cam_info_sub(nh, "/camera_info", 10), bounding_sub(nh, "/darknet_ros/bounding_boxes", 10), obj_num_sub(nh, "/obje_num", 10),
+      image_sub(nh, "/occam/image0", 100), proj_point_sub(nh, "/fusion_points", 100), cam_info_sub(nh, "/camera_info", 100), bounding_sub(nh, "/darknet_ros/bounding_boxes", 100), obj_num_sub(nh, "/obje_num", 100),
       fusion_bounding_sync(fusion_bounding_subs(10), image_sub, cam_info_sub, proj_point_sub, bounding_sub, obj_num_sub)
 
 {
-    pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 10);
-    pub_ = nh.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_boxes", 10);
-    pub__ = nh.advertise<sensor_fusion::object_datas>("/object_range", 10);
+    printf("initialized!!\n");
+    pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 100);
+    pub_ = nh.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_boxes", 100);
+    pub__ = nh.advertise<sensor_fusion::object_datas>("/object_range", 100);
     fusion_bounding_sync.registerCallback(boost::bind(&bounding_pub::Callback, this, _1, _2, _3, _4, _5));
+    printf("initialized finished!!\n");
 }
 
 void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const sensor_fusion::object_num::ConstPtr& num)
@@ -70,6 +72,7 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
   int8_t obj_num = num->num;
   int j = 0;
 
+  printf("callback1!\n");
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   jsk_recognition_msgs::BoundingBoxArray bboxes;
@@ -101,7 +104,7 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
 	      param[i][0] += (*pt).x;
 	      param[i][1] += (*pt).y;
 	      param[i][2] += (*pt).z;
-	      param[i][3] += sqrt( pow((*pt).x, 2.0) + pow((*pt).y, 2.0) + pow((*pt).z, 2.0));
+	      param[i][3] += sqrt( pow((*pt).x, 2.0) + pow((*pt).z, 2.0));
 	      param[i][4]++;
 	      msg->points[j].x = (*pt).x;
 	      msg->points[j].y = (*pt).y;
@@ -140,6 +143,7 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
   pub.publish(msg);
   pub_.publish(bboxes);
   pub__.publish(datas);
+  printf("finished measuring objects!!\n");
 }
 
 int main(int argc, char** argv)
