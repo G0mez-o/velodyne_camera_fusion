@@ -66,37 +66,39 @@ add_executable(matching_points_image src/matching_points_image.cpp)
 target_link_libraries(matching_points_image
     ${catkin_LIBRARIES}
     ${PCL_LIBRARIES}
-    ${OpenCV_+IBRARIES}
+    ${OpenCV_LIBRARIES}
 )
 
 add_executable(points_matching_image src/points_matching_image.cpp)
 target_link_libraries(points_matching_image
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-  ${OpenCV_+IBRARIES}
+  ${OpenCV_LIBRARIES}
 )
 
 add_executable(camera_info_publisher src/camera_info_publisher.cpp)
 target_link_libraries(camera_info_publisher
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-  ${OpenCV_+IBRARIES}
+  ${OpenCV_LIBRARIES}
 
 )
 
 add_executable(measuring_range src/measuring_range.cpp)
+add_dependencies(measuring_range measuring_range_generate_messages_cpp ${catkin_EXPORTED_TARGETS} ${sensor_fusion_EXPORTED_TARGETS})
 target_link_libraries(measuring_range
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-  ${OpenCV_+IBRARIES}
+  ${OpenCV_LIBRARIES}
 
   )
 
 add_executable(num_sub src/num_sub.cpp)
+add_dependencies(num_sub num_sub_generate_messages_cpp ${catkin_EXPORTED_TARGETS} ${sensor_fusion_EXPORTED_TARGETS})
 target_link_libraries(num_sub
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
-  ${OpenCV_+IBRARIES}
+  ${OpenCV_LIBRARIES}
 
 )
 
@@ -104,6 +106,6 @@ target_link_libraries(num_sub
 # target_link_libraries(measure_range
 #   ${catkin_LIBRARIES}
 #   ${PCL_LIBRARIES}
-#   ${OpenCV_+IBRARIES}
+#   ${OpenCV_LIBRARIES}
 
 # )
