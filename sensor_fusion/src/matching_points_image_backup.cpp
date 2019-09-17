@@ -58,6 +58,7 @@ Projection<T_p>::Projection()
     ROS_INFO("now constract function starting");
 
     sensor_fusion_sync.registerCallback(boost::bind(&Projection::Callback, this, _1, _2, _3));
+    pub = nh.advertise<sensor_msgs::Image>("/projection", 10);
     pub_ = nh.advertise<sensor_msgs::PointCloud2>("/fusion_points", 10);
     ROS_INFO("advertised /projection");
     flag = false;
@@ -116,49 +117,64 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
     std::cout<<"cv_bridge"<<std::endl;
     cv_bridge::CvImageConstPtr cv_img_ptr;
     try{
-      cv_img_ptr = cv_bridge::toCvCopy(image, sensor_msgs::image_encodings::TYPE_8UC3);
+        cv_img_ptr = cv_bridge::toCvShare(image);
     }catch (cv_bridge::Exception& e){
         ROS_ERROR("cv_bridge exception: %s", e.what());
         return;
     }
     cv::Mat cv_image(cv_img_ptr->image.rows, cv_img_ptr->image.cols, cv_img_ptr->image.type());
-    cv_image = cv_img_ptr->image;
+    cv_image = cv_bridge::toCvShare(image)->image;
+
+    // Realsense Data is saved BGR. change BGR to RGB
     cv::Mat rgb_image;
     cv::cvtColor(cv_image ,rgb_image, CV_BGR2RGB);
 
     // set PinholeCameraModel
     image_geometry::PinholeCameraModel cam_model;
     cam_model.fromCameraInfo(cinfo);
-    pcl::PointCloud<pcl::PointXYZRGB> msg;
+    int i = 0;
+    int j = 0;
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr msg (new pcl::PointCloud<pcl::PointXYZRGB>);
+    msg->header.frame_id = "occam/image0";
+    msg->points.resize(20000);
 
     for(typename pcl::PointCloud<T_p>::iterator pt=trans_cloud->points.begin(); pt<trans_cloud->points.end(); pt++)
     {
-      if ((*pt).z < 0)
-      {
-          continue;
-      }
-      cv::Point3d pt_cv((*pt).x, (*pt).y, (*pt).z);
-      cv::Point2d uv;
-      uv = cam_model.project3dToPixel(pt_cv);
-      if (uv.x>(-rgb_image.cols/2) && uv.x < (rgb_image.cols/2) && uv.y > (-rgb_image.rows/2) && uv.y < (rgb_image.rows/2))
-      {
-          cv::Point2d converted_uv(uv.x + rgb_image.cols / 2, uv.y + rgb_image.rows / 2);
-          cv::Vec3b rgb = rgb_image.at<cv::Vec3b>(converted_uv.y, converted_uv.x);
-          pcl::PointXYZRGB buffer_point;
-          buffer_point.x = (*pt).x;
-          buffer_point.y = (*pt).y;
-          buffer_point.z = (*pt).z;
-          buffer_point.r = rgb[0];
-          buffer_point.g = rgb[1];
-          buffer_point.b = rgb[2];
-          msg.push_back(buffer_point);
-      }
+      if((*pt).z<0) continue;
+
+        cv::Point3d pt_cv((*pt).x, (*pt).y, (*pt).z);
+        cv::Point2d uv;
+	//LiDARから得られる点群をピンホールカメラモデルによって2次元に変換し格納する
+        uv = cam_model.project3dToPixel(pt_cv);
+
+        if (uv.x>(-rgb_image.cols/2) && uv.x < (rgb_image.cols/2) && uv.y > (-rgb_image.rows/2) && uv.y < (rgb_image.rows/2))
+        {
+	  //LiDARから得られる点の距離を計算する
+	  //double range = sqrt( pow((*pt).x, 2.0) + pow((*pt).y, 2.0) + pow((*pt).z, 2.0));
+	    //点の距離に応じて色付けを変える
+	  // COLOUR c = GetColour(int (range/20*255.0), 0, 255);
+	    cv::Point2d uv_(uv.x + rgb_image.cols / 2, uv.y + rgb_image.rows / 2);
+	    //カメラ画像について，点群と画像中で対応する部分に色付き点(円)を表示する
+            //cv::circle(rgb_image, uv_, 1, cv::Scalar(int(255*c.b),int(255*c.g),int(255*c.r)), -1);
+	    msg->points[j].x = (*pt).x;
+	    msg->points[j].y = (*pt).y;
+	    msg->points[j].z = (*pt).z;
+	    msg->points[j].r = int(255*c.r);
+	    msg->points[j].g = int(255*c.g);
+	    msg->points[j].b = int(255*c.b);
+	    msg->points.push_back(msg->points[j]);
+	    j++;
+        }
 
     }
-    auto fusion_msg = msg.makeShared();
-    fusion_msg->header.frame_id = "occam/image0";
-    pcl_conversions::toPCL(ros::Time::now(), fusion_msg->header.stamp);
-    pub_.publish(fusion_msg);
+    ROS_INFO("%d Pointcloud processing complete", i);
+    sensor_msgs::ImagePtr projection_image;
+    //projection_image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", rgb_image).toImageMsg();
+    //projection_image->header.frame_id = image->header.frame_id;
+    //projection_image->header.stamp = pc2->header.stamp;
+    pub.publish(projection_image);
+    pcl_conversions::toPCL(ros::Time::now(), msg->header.stamp);
+    pub_.publish(msg);
 }
 
 
