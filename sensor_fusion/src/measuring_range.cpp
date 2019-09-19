@@ -80,9 +80,11 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
   cam_model.fromCameraInfo(cinfo);
   pcl::PointCloud<pcl::PointXYZRGB> msg;
   double range;
+  bool init_flag;
   for (unsigned int i = 0; i < object_num; i++)
   {
-    bool init_flag = false;
+    range = 100.0;
+    init_flag = false;
     if (boxes->bounding_boxes[i].Class != "person" && boxes->bounding_boxes[i].probability < 35.0)
     {
       continue;
@@ -99,25 +101,40 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
       cv::Point2d pv_(pv.x + 240, pv.y + 360);
       if (pv_.x > boxes->bounding_boxes[i].xmin && pv_.x < boxes->bounding_boxes[i].xmax && pv_.y > boxes->bounding_boxes[i].ymin && pv_.y < boxes->bounding_boxes[i].ymax)
       {
-        if (!init_flag)
+        if (sqrt(pow((*pt).z, 2.0)) < range)
         {
-          range = sqrt( pow((*pt).x, 2.0) + pow((*pt).z, 2.0));
+          range = sqrt(pow((*pt).z, 2.0));
           set_x = pv_.x;
           set_y = pv_.y;
+          init_flag = true;
+          pcl::PointXYZRGB buffer_point;
+          buffer_point.x = (*pt).x;
+          buffer_point.y = (*pt).y;
+          buffer_point.z = (*pt).z;
+          buffer_point.r = 255.0;
+          buffer_point.g = 0.0;
+          buffer_point.b = 0.0;
+          msg.push_back(buffer_point);
         }
-        else if (sqrt(pow(pv_.x - mid_x, 2.0) + pow(pv_.y - mid_y, 2.0)) < sqrt(pow(set_x - mid_x, 2.0) + pow(set_y - mid_y, 2.0)))
-        {
-          range = sqrt( pow((*pt).x, 2.0) + pow((*pt).z, 2.0));
-          set_x = pv_.x;
-          set_y = pv_.y;
-        }
+        // else if (sqrt(pow((*pt).z, 2.0)) < range);
+        // {
+        //   range = sqrt(pow((*pt).z, 2.0));
+        //   set_x = pv_.x;
+        //   set_y = pv_.y;
+        // }
+        // else if (sqrt(pow(pv_.x - mid_x, 2.0) + pow(pv_.y - mid_y, 2.0)) < sqrt(pow(set_x - mid_x, 2.0) + pow(set_y - mid_y, 2.0)))
+        // {
+        //   range = sqrt( pow((*pt).x, 2.0) + pow((*pt).z, 2.0));
+        //   set_x = pv_.x;
+        //   set_y = pv_.y;
+        // }
         pcl::PointXYZRGB buffer_point;
         buffer_point.x = (*pt).x;
         buffer_point.y = (*pt).y;
         buffer_point.z = (*pt).z;
-        buffer_point.r = (*pt).r;
-        buffer_point.g = (*pt).g;
-        buffer_point.b = (*pt).b;
+        buffer_point.r = 0.0;
+        buffer_point.g = 255.0;
+        buffer_point.b = 0.0;
         msg.push_back(buffer_point);
       }
     }
@@ -127,7 +144,7 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
     boxtext += std::to_string(boxes->bounding_boxes[i].probability);
     boxtext += ", range:";
     boxtext += std::to_string(range);
-    cv::putText(rgb_image, boxtext, cv::Point(boxes->bounding_boxes[i].xmin, boxes->bounding_boxes[i].ymin - 6), cv::FONT_HERSHEY_PLAIN, 1.2, cv::Scalar(255, 0, 255), CV_AA);
+    cv::putText(rgb_image, boxtext, cv::Point(boxes->bounding_boxes[i].xmin, boxes->bounding_boxes[i].ymin - 6), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(255, 0, 255));
   }
   auto detected_person_msg = msg.makeShared();
   detected_person_msg->header.frame_id = "/occam/image0";
