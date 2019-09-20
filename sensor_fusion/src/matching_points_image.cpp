@@ -156,7 +156,7 @@ void Projection<T_p>::projection(const sensor_msgs::Image::ConstPtr image,
 
     }
     auto fusion_msg = msg.makeShared();
-    fusion_msg->header.frame_id = "occam/image0";
+    fusion_msg->header.frame_id = "/occam/image0";
     pcl_conversions::toPCL(ros::Time::now(), fusion_msg->header.stamp);
     pub_.publish(fusion_msg);
 }
