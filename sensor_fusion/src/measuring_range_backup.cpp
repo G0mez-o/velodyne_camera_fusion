@@ -29,120 +29,132 @@
 #include <darknet_ros_msgs/BoundingBoxes.h>
 #include <darknet_ros_msgs/BoundingBox.h>
 
-#include <sensor_fusion/object_datas.h>
-#include <sensor_fusion/object_data.h>
-#include <sensor_fusion/object_num.h>
-
 class bounding_pub{
     private:
         ros::NodeHandle nh;
-        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::PointCloud2, darknet_ros_msgs::BoundingBoxes, sensor_fusion::object_num> fusion_bounding_subs;
+        typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::CameraInfo, sensor_msgs::PointCloud2, darknet_ros_msgs::BoundingBoxes> fusion_bounding_subs;
         message_filters::Subscriber<sensor_msgs::Image> image_sub;
         message_filters::Subscriber<sensor_msgs::PointCloud2> proj_point_sub;
         message_filters::Subscriber<sensor_msgs::CameraInfo> cam_info_sub;
         message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> bounding_sub;
-        message_filters::Subscriber<sensor_fusion::object_num> obj_num_sub;
         message_filters::Synchronizer<fusion_bounding_subs> fusion_bounding_sync;
         ros::Publisher pub;
         ros::Publisher pub_;
-        ros::Publisher pub__;
-
     public:
   //コンストラクタ
         bounding_pub();
-        void Callback(const sensor_msgs::Image::ConstPtr&, const sensor_msgs::CameraInfo::ConstPtr&, const sensor_msgs::PointCloud2::ConstPtr&, const darknet_ros_msgs::BoundingBoxes::ConstPtr&, const sensor_fusion::object_num::ConstPtr&);
+        void Callback(const sensor_msgs::Image::ConstPtr&, const sensor_msgs::CameraInfo::ConstPtr&, const sensor_msgs::PointCloud2::ConstPtr&, const darknet_ros_msgs::BoundingBoxes::ConstPtr&);
 };
 
 bounding_pub::bounding_pub()
     : nh("~"),
-      image_sub(nh, "/occam/image0", 100), proj_point_sub(nh, "/fusion_points", 100), cam_info_sub(nh, "/camera_info", 100), bounding_sub(nh, "/darknet_ros/bounding_boxes", 100), obj_num_sub(nh, "/obje_num", 100),
-      fusion_bounding_sync(fusion_bounding_subs(10), image_sub, cam_info_sub, proj_point_sub, bounding_sub, obj_num_sub)
+      image_sub(nh, "/occam/image0", 100), proj_point_sub(nh, "/fusion_points", 100), cam_info_sub(nh, "/camera_info", 100), bounding_sub(nh, "/darknet_ros/bounding_boxes", 100),
+      fusion_bounding_sync(fusion_bounding_subs(10), image_sub, cam_info_sub, proj_point_sub, bounding_sub)
 
 {
     printf("initialized!!\n");
-    pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 100);
-    pub_ = nh.advertise<jsk_recognition_msgs::BoundingBoxArray>("/object_boxes", 100);
-    pub__ = nh.advertise<sensor_fusion::object_datas>("/object_range", 100);
-    fusion_bounding_sync.registerCallback(boost::bind(&bounding_pub::Callback, this, _1, _2, _3, _4, _5));
-    printf("initialized finished!!\n");
+    pub = nh.advertise<sensor_msgs::PointCloud2>("/object_points", 10);
+    pub_ = nh.advertise<sensor_msgs::Image>("detected_person_image", 10);
+    fusion_bounding_sync.registerCallback(boost::bind(&bounding_pub::Callback, this, _1, _2, _3, _4));
 }
 
-void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes, const sensor_fusion::object_num::ConstPtr& num)
+void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sensor_msgs::CameraInfo::ConstPtr& cinfo, const sensor_msgs::PointCloud2::ConstPtr& points, const darknet_ros_msgs::BoundingBoxes::ConstPtr& boxes)
 {
-  int8_t obj_num = num->num;
-  int j = 0;
-
-  printf("callback1!\n");
-
+  unsigned int object_num = boxes->bounding_boxes.size();
+  printf("callback!\n");
+  std::cout<<"cv_bridge"<<std::endl;
+  cv_bridge::CvImageConstPtr cv_img_ptr;
+  try{
+    cv_img_ptr = cv_bridge::toCvCopy(image, sensor_msgs::image_encodings::TYPE_8UC3);
+  }catch (cv_bridge::Exception& e){
+      ROS_ERROR("cv_bridge exception: %s", e.what());
+      return;
+  }
+  cv::Mat cv_image(cv_img_ptr->image.rows, cv_img_ptr->image.cols, cv_img_ptr->image.type());
+  cv_image = cv_img_ptr->image;
+  cv::Mat rgb_image;
+  cv::cvtColor(cv_image ,rgb_image, CV_BGR2RGB);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
-  jsk_recognition_msgs::BoundingBoxArray bboxes;
-  jsk_recognition_msgs::BoundingBox bbox;
-  sensor_fusion::object_datas datas;
-  sensor_fusion::object_data data;
   pcl::fromROSMsg(*points, *cloud);
   image_geometry::PinholeCameraModel cam_model;
   cam_model.fromCameraInfo(cinfo);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr msg (new pcl::PointCloud<pcl::PointXYZ>);
-  msg->header.frame_id = "occam/image0";
-  msg->points.resize(20000);
-  double param[obj_num][5] = {0};
-  std::string objname[obj_num];
-  for (int i = 0; i < obj_num; i++)
+  pcl::PointCloud<pcl::PointXYZRGB> msg;
+  double range;
+  bool init_flag;
+  for (unsigned int i = 0; i < object_num; i++)
+  {
+    range = 100.0;
+    init_flag = false;
+    if (boxes->bounding_boxes[i].Class != "person" && boxes->bounding_boxes[i].probability < 35.0)
     {
-      objname[i] = boxes->bounding_boxes[i].Class;
+      continue;
     }
-  for (pcl::PointCloud<pcl::PointXYZRGB>::iterator pt=cloud->points.begin(); pt<cloud->points.end(); pt++)
+    double mid_x, mid_y;
+    double set_x, set_y;
+    mid_x = (boxes->bounding_boxes[i].xmin + boxes->bounding_boxes[i].xmax) / 2.0;
+    mid_y = (boxes->bounding_boxes[i].ymax + boxes->bounding_boxes[i].ymax) / 2.0;
+    for (pcl::PointCloud<pcl::PointXYZRGB>::iterator pt=cloud->points.begin(); pt<cloud->points.end(); pt++)
     {
       cv::Point3d p_cv((*pt).x, (*pt).y, (*pt).z);
       cv::Point2d pv;
       pv = cam_model.project3dToPixel(p_cv);
       cv::Point2d pv_(pv.x + 240, pv.y + 360);
-      for (int i = 0; i < obj_num; i++)
-	{
-	  if (pv_.x > boxes->bounding_boxes[i].xmin && pv_.x < boxes->bounding_boxes[i].xmax && pv_.y > boxes->bounding_boxes[i].ymin && pv_.y < boxes->bounding_boxes[i].ymax)
-	    {
-	      param[i][0] += (*pt).x;
-	      param[i][1] += (*pt).y;
-	      param[i][2] += (*pt).z;
-	      param[i][3] += sqrt( pow((*pt).x, 2.0) + pow((*pt).z, 2.0));
-	      param[i][4]++;
-	      msg->points[j].x = (*pt).x;
-	      msg->points[j].y = (*pt).y;
-	      msg->points[j].z = (*pt).z;
-	      msg->points.push_back(msg->points[j]);
-	      j++;
-	    }
-	}
+      if (pv_.x > boxes->bounding_boxes[i].xmin && pv_.x < boxes->bounding_boxes[i].xmax && pv_.y > boxes->bounding_boxes[i].ymin && pv_.y < boxes->bounding_boxes[i].ymax)
+      {
+        if (sqrt(pow((*pt).z, 2.0)) < range)
+        {
+          range = sqrt(pow((*pt).z, 2.0));
+          set_x = pv_.x;
+          set_y = pv_.y;
+          init_flag = true;
+          pcl::PointXYZRGB buffer_point;
+          buffer_point.x = (*pt).x;
+          buffer_point.y = (*pt).y;
+          buffer_point.z = (*pt).z;
+          buffer_point.r = 255.0;
+          buffer_point.g = 0.0;
+          buffer_point.b = 0.0;
+          msg.push_back(buffer_point);
+        }
+        // else if (sqrt(pow((*pt).z, 2.0)) < range);
+        // {
+        //   range = sqrt(pow((*pt).z, 2.0));
+        //   set_x = pv_.x;
+        //   set_y = pv_.y;
+        // }
+        // else if (sqrt(pow(pv_.x - mid_x, 2.0) + pow(pv_.y - mid_y, 2.0)) < sqrt(pow(set_x - mid_x, 2.0) + pow(set_y - mid_y, 2.0)))
+        // {
+        //   range = sqrt( pow((*pt).x, 2.0) + pow((*pt).z, 2.0));
+        //   set_x = pv_.x;
+        //   set_y = pv_.y;
+        // }
+        pcl::PointXYZRGB buffer_point;
+        buffer_point.x = (*pt).x;
+        buffer_point.y = (*pt).y;
+        buffer_point.z = (*pt).z;
+        buffer_point.r = 0.0;
+        buffer_point.g = 255.0;
+        buffer_point.b = 0.0;
+        msg.push_back(buffer_point);
+      }
     }
-  for (int i = 0; i < obj_num; i++)
-    {
-      param[i][0] /= param[i][4];
-      param[i][1] /= param[i][4];
-      param[i][2] /= param[i][4];
-      param[i][3] /= param[i][4];
-      bbox.header.frame_id = "occam/image0";
-      bbox.pose.position.x =  param[i][0];
-      bbox.pose.position.y =  param[i][1];
-      bbox.pose.position.z =  param[i][2];
-      bbox.pose.orientation.x = 0;
-      bbox.pose.orientation.y = 0;
-      bbox.pose.orientation.z = 0;
-      bbox.dimensions.x = param[i][0];
-      bbox.dimensions.y = param[i][1];
-      bbox.dimensions.z = param[i][2];
-      bboxes.boxes.push_back(bbox);
-      data.header.frame_id = "occam/image0";
-      data.object_name = objname[i];
-      data.x = param[i][0];
-      data.y = param[i][1];
-      data.z = param[i][2];
-      data.range = param[i][3];
-      datas.datas.push_back(data);
-    }
-  pcl_conversions::toPCL(ros::Time::now(), msg->header.stamp);
-  pub.publish(msg);
-  pub_.publish(bboxes);
-  pub__.publish(datas);
+    cv::rectangle(rgb_image, cv::Point(boxes->bounding_boxes[i].xmin, boxes->bounding_boxes[i].ymin), cv::Point(boxes->bounding_boxes[i].xmax,  boxes->bounding_boxes[i].ymax), cv::Scalar(255, 0, 255), 3, 4);
+    std::string boxtext;
+    boxtext += "probability:";
+    boxtext += std::to_string(boxes->bounding_boxes[i].probability);
+    boxtext += ", range:";
+    boxtext += std::to_string(range);
+    cv::putText(rgb_image, boxtext, cv::Point(boxes->bounding_boxes[i].xmin, boxes->bounding_boxes[i].ymin - 6), cv::FONT_HERSHEY_PLAIN, 1.0, cv::Scalar(255, 0, 255));
+  }
+  auto detected_person_msg = msg.makeShared();
+  detected_person_msg->header.frame_id = "/occam/image0";
+  pcl_conversions::toPCL(ros::Time::now(), detected_person_msg->header.stamp);
+  pub.publish(detected_person_msg);
+  sensor_msgs::ImagePtr detected_image;
+  detected_image = cv_bridge::CvImage(std_msgs::Header(), "bgr8", rgb_image).toImageMsg();
+  detected_image->header.frame_id = image->header.frame_id;
+  detected_image->header.stamp = ros::Time::now();
+  pub_.publish(detected_image);
   printf("finished measuring objects!!\n");
 }
 
