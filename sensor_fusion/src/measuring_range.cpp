@@ -109,7 +109,7 @@ void bounding_pub::Callback(const sensor_msgs::Image::ConstPtr& image, const sen
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
     sor.setInputCloud(cloud_ptr);
     sor.setMeanK(8);
-    sor.setStddevMulThresh(1.0);
+    sor.setStddevMulThresh(10.0);
     sor.filter(*cloud_filtered);
     for (pcl::PointCloud<pcl::PointXYZ>::iterator pt=cloud_filtered->points.begin(); pt<cloud_filtered->points.end(); pt++)
     {
